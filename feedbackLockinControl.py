@@ -59,10 +59,22 @@ except: inputChannels = "ai8_2,ai8,ai9,ai10,ai11,ai12,ai13,ai14,ai15"
 try: outputChannels = config['DAQ']['output channels']
 except: outputChannels = "Dev1/ao0:7"
 
+try: outputClock = config['DAQ']['output clock']
+except: outputClock = "/Dev3/ao/SampleClock"
+
+try: outputClockChannel = config['DAQ']['output clock channel']
+except: outputClockChannel = "/Dev3/PFI7"
+
+try: inputClockChannel = config['DAQ']['input clock channel']
+except: inputClockChannel = "/Dev1/PFI7"
+
+
 # feedBackLockin is the main object that handles the control and feedback of the 
 # overall lock-in system
 feedBackLockin=feedbackLockin()
 feedBackLockin.setNpoints(samplesPerSine)
+print(nChannels)
+feedBackLockin.setNparam(nChannels)
 feedBackLockin.updateFeedback(initKint,initKprop)
 
 if runOffline:
@@ -84,7 +96,7 @@ else:
 	# for the input. This is done so that we can repeat the first channel
 	# to eliminate an artifact of the DAQ's multiplexing
 	daqDevice.outputChannels(outputChannels)
-
+	daqDevice.setClocks(outputClock,outputClockChannel,inputClockChannel)
 
 
 #initialize the GUI
@@ -115,6 +127,8 @@ def exportOnSocket():
 	if tcpipEngineOut:
 		temp=np.append(feedBackLockin.vOuts,feedBackLockin.vIns)
 		temp=np.append(temp,feedBackLockin.ACins)
+		temp=np.append(temp,feedBackLockin.Phaseins)
+
 		if outAveIndex>5:
 			temp=outAverage.step(temp)
 		outAveIndex+=1
@@ -156,7 +170,7 @@ def parseCommands(commandsIn):
  
 def updateAmps(input):
 	#slot for updating outputs when feedback is off
-	idxIn=int(ui.centralwidget.sender().objectName().replace("voltOut",""))-1
+	idxIn=int(ui.centralwidget.sender().objectName().replace("voltOut",""))-0
 	feedBackLockin.updateAmps(input,idxIn)
 	
 def updateAve(input):
@@ -165,7 +179,7 @@ def updateAve(input):
 	
 def updateSetPoints(input):
 	#slot for updating feedback setpoints
-	idxIn=int(ui.centralwidget.sender().objectName().replace("voltIn",""))-1
+	idxIn=int(ui.centralwidget.sender().objectName().replace("voltIn",""))-0
 	feedBackLockin.updateSetpoints(input,idxIn)
 
 def updateFeedback():
@@ -175,9 +189,9 @@ def updateFeedback():
 def setSignalReference(input):
 	#sets the index of the channel being used as a reference
 	#if <0 the reference value is zero
-	feedBackLockin.setReference(input-1)
+	feedBackLockin.setReference(input-0)
 	if input>0:
-		feedBack[input-1].setChecked(False)
+		feedBack[input-0].setChecked(False)
 		
 def updateOffset(input):
 	#slot for changing DC offset
@@ -187,7 +201,7 @@ def updateOffset(input):
 	
 def toggleFeedback(input):
 	#slot for enabling/disabling feedback
-	idxIn=int(ui.centralwidget.sender().objectName().replace("feedBack",""))-1
+	idxIn=int(ui.centralwidget.sender().objectName().replace("feedBack",""))-0
 	if input:
 		#feedback is on
 		voltsOut[idxIn].valueChanged.disconnect(updateAmps)
@@ -206,12 +220,14 @@ voltsOut=[]
 voltsIn =[]
 feedBack=[]
 ACins = []
+Phaseins = []
 
 for i in range(nChannels):
-	eval("voltsOut.append(ui.voltOut%d)" % (i+1))
-	eval("voltsIn.append(ui.voltIn%d)" % (i+1))
-	eval("feedBack.append(ui.feedBack%d)" % (i+1))
-	eval("ACins.append(ui.ACin%d)" % (i+1))
+	eval("voltsOut.append(ui.voltOut%d)" % (i+0))
+	eval("voltsIn.append(ui.voltIn%d)" % (i+0))
+	eval("feedBack.append(ui.feedBack%d)" % (i+0))
+	eval("ACins.append(ui.ACin%d)" % (i+0))
+	eval("Phaseins.append(ui.Phasein%d)" % (i+0))
 	voltsIn[i].valueChanged.connect(updateSetPoints)
 	voltsIn[i].setValue(initSetPoints[i])
 	feedBack[i].setChecked(True)
@@ -253,6 +269,7 @@ def update():
 		#update data in GUI
 		curves[i].setData(data.T[i])
 		ACins[i].setValue(feedBackLockin.ACins[i])
+		Phaseins[i].setValue(feedBackLockin.Phaseins[i])
 		
 		if feedBackLockin.feedBackOn[i]:
 			#only update if feedback is on	

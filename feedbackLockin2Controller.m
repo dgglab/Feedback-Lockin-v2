@@ -4,16 +4,16 @@ data from the feedbackLockin python program via TCP/IP socket connection.
 At present, it is configured to read 24 double precision numbers for three
 parameters from 8 channels. 
 %}
-classdef feedbackLockinController < handle
+classdef feedbackLockin2Controller < handle
     
     properties
        
         tcpConnection
-        dataStore = zeros(24,1);
+        dataStore = zeros(32,1);
         Vout
         Vin
         Vmeas
-        
+        Phase
     end
     
 
@@ -32,8 +32,8 @@ classdef feedbackLockinController < handle
             %and clears the buffer 
             bytesAvailable = obj.tcpConnection.BytesAvailable;
             
-            if bytesAvailable >= 24*8
-                obj.dataStore = fread(obj.tcpConnection,24,'double');
+            if bytesAvailable >= 32*8
+                obj.dataStore = fread(obj.tcpConnection,32,'double');
             end
             if obj.tcpConnection.BytesAvailable > 0
                 fread(obj.tcpConnection,obj.tcpConnection.BytesAvailable/8,'double'); %purges the buffer
@@ -54,7 +54,7 @@ classdef feedbackLockinController < handle
             % channels sent by the feedbackLockin program
             obj.sendDataCommand();
             
-            while obj.tcpConnection.BytesAvailable < 24*8
+            while obj.tcpConnection.BytesAvailable < 32*8
                 pause(.01);
             end
             
@@ -63,7 +63,7 @@ classdef feedbackLockinController < handle
             obj.Vout=obj.dataStore(1:8);
             obj.Vin =obj.dataStore(9:16);
             obj.Vmeas=obj.dataStore(17:24);
-            
+            obj.Phase=obj.dataStore(25:32);
             
         end
         function closeConnection(obj)

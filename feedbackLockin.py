@@ -26,30 +26,33 @@ class feedbackLockin(QtCore.QObject):
 		self.Kprop=0
 		self.maxOut = 10.0
 		self.minOut = -10.0
-		self.offsets = np.zeros(self.Nparam)
+		###self.offsets = np.zeros(self.Nparam)
 		# data variables
-		self.vOuts=np.zeros(self.Nparam)
-		self.vIns=np.zeros(self.Nparam)
-		self.ACins=np.zeros(self.Nparam)
-		self.data=np.zeros((self.Npoints,self.Nparam))
+		###self.vOuts=np.zeros(self.Nparam)
+		###self.vIns=np.zeros(self.Nparam)
+		###self.ACins=np.zeros(self.Nparam)
+		###self.data=np.zeros((self.Npoints,self.Nparam))
 		
 		# boolean flag for whether an input is 
-		self.feedBackOn=np.ones(self.Nparam,dtype=bool)
+		###self.feedBackOn=np.ones(self.Nparam,dtype=bool)
 		
 		self.controlPI=discretePI()
-		self.controlPI.setNparams(self.Nparam)
+		###self.controlPI.setNparams(self.Nparam)
 		self.controlPI.setKint(self.Kint)
 		self.controlPI.setKprop(self.Kprop)
 		
 		#biasR is used to ensure current conservation, effectively
 		#tying feedback loops together
 		self.biasR=biasResistor()
-		self.biasR.setNparam(self.Nparam)
+		###self.biasR.setNparam(self.Nparam)
 		self.biasR.setZeroSum(0.5)
+		
 		
 		#produces the sine waves sent to the bias resistors
 		self.sines = sinOutputs()
-		self.setupSines()
+		self.setNparam(self.Nparam)
+		
+		###self.setupSines()
 		
 		#reads out amplitude from AC signal
 		self.lockIn1 = lockInCalculator()
@@ -58,7 +61,18 @@ class feedbackLockin(QtCore.QObject):
 		#averager 
 		self.averager = movingAverager()
 		
-		
+	def setNparam(self,Nparam_in):
+		self.Nparam = Nparam_in
+		self.offsets = np.zeros(self.Nparam)
+		self.vOuts=np.zeros(self.Nparam)
+		self.vIns=np.zeros(self.Nparam)
+		self.ACins=np.zeros(self.Nparam)
+		self.Phaseins=np.zeros(self.Nparam)
+		self.data=np.zeros((self.Npoints,self.Nparam))
+		self.feedBackOn=np.ones(self.Nparam,dtype=bool)
+		self.controlPI.setNparams(self.Nparam)
+		self.biasR.setNparam(self.Nparam)
+		self.setupSines()
 		
 	def setNpoints(self,N_in):
 		self.Npoints=N_in
@@ -150,7 +164,9 @@ class feedbackLockin(QtCore.QObject):
 		self.data=data
 		
 		#Fourier component measured
-		ampsReadIn=self.averager.step(self.lockIn1.calcAmps(data.T)[1])
+		ampsReadIn=self.averager.step(self.lockIn1.calcAmps(data.T)[1]) #X
+		Y=self.averager.step(self.lockIn1.calcAmps(data.T)[0]) #Y
+		PhaseReadIn=np.degrees(np.arctan2(Y,ampsReadIn)) #Phase	
 		
 		#setpoint amplitudes calculated
 		ampsSetOut=self.controlPI.step(ampsReadIn)
@@ -169,6 +185,7 @@ class feedbackLockin(QtCore.QObject):
 		
 		for i in range(self.Nparam):
 			self.ACins[i]=ampsReadIn[i]
+			self.Phaseins[i]=PhaseReadIn[i]
 			
 			if self.feedBackOn[i]:
 				

@@ -44,6 +44,11 @@ class daqLockInHardware(QObject):
 		self.data = np.zeros((self.Npoints,self.Nparam))
 		self.dataOut = np.zeros((self.Npoints,self.Nparam))
 	
+	def setClocks(self,outputClock,outputClockChannel,inputClockChannel):
+		self.outputClock=outputClock
+		self.outputClockChannel=outputClockChannel
+		self.inputClockChannel=inputClockChannel
+	
 	def setSampleRate(self):
 		# sets the sample rate of the DAQ card
 		self.rate=self.frequency*self.Npoints
@@ -71,7 +76,7 @@ class daqLockInHardware(QObject):
 		try:
 			
 			# DAQmx Configure Code, Output
-			mx.DAQmxConnectTerms("/Dev1/ao/SampleClock","/Dev1/PFI8",mx.DAQmx_Val_DoNotInvertPolarity)
+			mx.DAQmxConnectTerms(self.outputClock,self.outputClockChannel,mx.DAQmx_Val_DoNotInvertPolarity)
 			mx.DAQmxCreateTask("",byref(self.outputTaskHandle))
 			mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,self.channelOut,"",-10.0,10.0,mx.DAQmx_Val_Volts,None)
 			#mx.DAQmxSetWriteRegenMode(self.outputTaskHandle,mx.DAQmx_Val_DoNotAllowRegen)
@@ -82,7 +87,7 @@ class daqLockInHardware(QObject):
 			mx.DAQmxCreateTask("",byref(self.inputTaskHandle))
 			#mx.DAQmxCreateAIVoltageChan(self.inputTaskHandle,self.channelIn,"",mx.DAQmx_Val_Cfg_Default,-10.0,10.0,mx.DAQmx_Val_Volts,None)
 			mx.DAQmxAddGlobalChansToTask(self.inputTaskHandle,self.channelIn)
-			mx.DAQmxCfgSampClkTiming(self.inputTaskHandle,"/Dev3/PFI7",self.rate,mx.DAQmx_Val_Rising,mx.DAQmx_Val_ContSamps,self.Npoints)
+			mx.DAQmxCfgSampClkTiming(self.inputTaskHandle,self.inputClockChannel,self.rate,mx.DAQmx_Val_Rising,mx.DAQmx_Val_ContSamps,self.Npoints)
 			
 			mx.DAQmxSetReadReadAllAvailSamp(self.inputTaskHandle,True)
 
