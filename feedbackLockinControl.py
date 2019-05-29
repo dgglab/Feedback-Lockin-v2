@@ -189,9 +189,9 @@ def updateFeedback():
 def setSignalReference(input):
 	#sets the index of the channel being used as a reference
 	#if <0 the reference value is zero
-	feedBackLockin.setReference(input-0)
-	if input>0:
-		feedBack[input-0].setChecked(False)
+	feedBackLockin.setReference(input)
+	if input>-1:
+		feedBack[input].setChecked(False)
 		
 def updateOffset(input):
 	#slot for changing DC offset
