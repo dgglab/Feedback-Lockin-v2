@@ -1,3 +1,4 @@
+# %load C:\Users\dgglab\Desktop\Feedback-Lockin-v2\feedbackLockin_qcodes_module.py
 import time
 import numpy as np
 import socket
@@ -16,10 +17,12 @@ class FeedbackLockin(Instrument):
     Evgeny Mikheev, 19/05/26
 	# usage example:
 	# FBL = FeedbackLockin('FBL', TCPport=10000)
-	# FBL.connectTCP()		
+	# FBL.connectTCP()
 	# FBL.TCPdata.get(); # to fetch data from the TCP connection
 	# data=FBL.data; # to access stored data without calling the TCP connection
     """
+    
+    
     def __init__(self, name, TCPport, **kwargs):
         super().__init__(name, **kwargs)
         self.TCPport=TCPport
@@ -67,11 +70,30 @@ class FeedbackLockin(Instrument):
     def _set_v_out(self, c, v):
         self.socket.sendall(bytes(f'setI {c} {v}\n', encoding='UTF-8'))
 
+class parseVout(Instrument):
+    # Meta-instrument for reading an input channels
+    # from stored data without calling the TCP connection
+    # usage example:
+    # out1=parseVout('out1',fbl=FBL,chO=1,ampO=1e4)
+    def __init__(self,name,fbl,chO,ampO,**kwargs):
+            super().__init__(name, **kwargs)
+            self.fbl=fbl
+            self.chO=chO
+            self.ampO=ampO
+            self.add_parameter('Vout',get_cmd=self._getVout,unit='V')
+            self.add_parameter('Phase',get_cmd=self._getPhase,unit='deg')
+        def _getVout(self):
+            data=self.fbl.stored_data.get();
+            return data[self.chO,2]/self.ampO
+        def _getPhase(self):
+            data=self.fbl.stored_data.get();
+            return data[self.chO,3]        
 
-class getR_chA_chB_chI(Instrument):
-	# Meta-instrument for reading 3 input channels into a resistance
-	# usage example:
-	# Rxx=getR_chA_chB_chI('Rxx',fbl=FBL,chA=0,ampA=1e4,chB=1,ampB=1e5,chI=2,ampI=1e5,R2GND=470)
+class parseR_chA_chB_chI(Instrument):
+    # Meta-instrument for reading 3 input channels into a resistance
+    # from stored data without calling the TCP connection
+    # usage example:
+    # Rxx=getR_chA_chB_chI('Rxx',fbl=FBL,chA=0,ampA=1e4,chB=1,ampB=1e5,chI=2,ampI=1e5,R2GND=470)
     def __init__(self,name,fbl,chA,ampA,chB,ampB,chI,ampI,R2GND,**kwargs):
         super().__init__(name, **kwargs)
         self.fbl=fbl
@@ -112,7 +134,17 @@ class getR_chA_chB_chI(Instrument):
         data=self.fbl.stored_data.get();
         return data[self.chI,3]
 
-
-
-
-		
+class parseT_OCT(Instrument):
+    # Meta-instrument for converting resistance from another meta-instrument into temperature, using a calibration file 
+    # usage example:
+    # Roct=parseR_chA_chB_chI('Roct',fbl=FBL,chA=0,ampA=1e4,chB=1,ampB=1e5,chI=2,ampI=1e5,R2GND=470)
+    # calfilename = "D:/Dropbox (DGG Lab)/Cryocooler/Main/Evgeny/Lakeshore/R16C19.dat"
+    # OCT=parseT_OCT('OCT',R=Roct,calfilename=calfilename)
+    def __init__(self,name,R,calfilename,**kwargs):
+        super().__init__(name, **kwargs)
+        self.R=R
+        self.cal=np.loadtxt(calfilename,skiprows=2)
+        self.add_parameter('Toct',get_cmd=self._get_Toct,unit='K')
+    def _get_Toct(self):
+        Roct = self.R.R.get()
+        return np.interp(Roct,np.flipud(self.cal[:,1]),np.flipud(self.cal[:,0]));
