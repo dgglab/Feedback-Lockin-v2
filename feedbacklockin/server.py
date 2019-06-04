@@ -48,17 +48,17 @@ class Server(QObject):
     def _handle(self, conn):
         l = conn.readLine().data().decode('utf-8').strip().split(' ')
         try:
-            if l[0] == 'sendData':
+            if l[0] == 'sendData' or l[0] == 'send_data':
                 self.send_data.emit(conn)
-            elif l[0] == 'setV':
+            elif l[0] == 'setV' or l[0] == 'set_setpoint':
                 self.set_v.emit(int(l[1]), float(l[2]))
-            elif l[0] == 'setI':
+            elif l[0] == 'setI' or l[0] == 'set_amplitude':
                 self.set_i.emit(int(l[1]), float(l[2]))
-            elif l[0] == 'setKi':
+            elif l[0] == 'setKi' or l[0] == 'set_ki':
                 self.set_ki.emit(float(l[1]))
-            elif l[0] == 'setFeed':
+            elif l[0] == 'setFeed' or l[0] == 'set_feedback':
                 self.set_feed.emit(int(l[1]), bool(int(l[2])))
-            elif l[0] == 'autoTune':
+            elif l[0] == 'autoTune' or l[0] == 'autotune':
                 if len(l) == 2:
                     self.autotune.emit(float(l[1]))
                 else:

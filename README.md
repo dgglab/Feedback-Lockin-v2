@@ -22,6 +22,23 @@ Optionally provide `-s path/to/config.ini`. For instance, to run locally with
 no DAQ card, run `python -m feedbacklockin -s dev.ini`, and to run with the VTI
 config, use `python -m feedbacklockin -s vti.ini`.
 
+## TCP API
+
+The lockin will start a TCP server listening on the supplied port, or a random
+port if none is supplied. Connect to it and send commands to control the lockin
+from external processes. Terminate each command with a newline. Spaces delimit
+arguments.
+
+* In response to `send_data`, the lockin will respond with output amplitudes,
+X, and phase in an array with Fortran ordering.
+* Send `set_setpoint CHANNEL VALUE` to set the feedback setpoint of the given
+channel (integer) to the given value (float).
+* Send `set_amplitude CHANNEL VALUE` to set the channel output amplitude if
+feedback is off.
+* Send `set_feedback CHANNEL ENABLED` to set the feedback setpoint. `ENABLED`
+must be `0` for feedback disabled, and `1` for enabled.
+* Send `autotune` to set PID constants.
+
 ## Code Overview
 
 The code is located in the `feedbacklockin` package. We loosely follow PEP8.
