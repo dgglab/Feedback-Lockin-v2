@@ -8,11 +8,11 @@ record the current passing into or out of each channel.
 from PySide2.QtCore import *
 import numpy as np
 
-from sin_outs import SinOutputs
-from lockin_calc import LockinCalculator
-from moving_averager import MovingAverager
-from discrete_pi import DiscretePI
-from bias_resistor import BiasResistor
+from feedbacklockin.sin_outs import SinOutputs
+from feedbacklockin.lockin_calc import LockinCalculator
+from feedbacklockin.moving_averager import MovingAverager
+from feedbacklockin.discrete_pi import DiscretePI
+from feedbacklockin.bias_resistor import BiasResistor
 
 
 _MIN_OUT = -10.0

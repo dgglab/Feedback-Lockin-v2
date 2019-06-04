@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Feedback lockin interface made with Qt5 widgets via PySide2."""
 import argparse
 from functools import partial
@@ -12,8 +11,8 @@ from PySide2.QtCore import *
 from PySide2.QtWidgets import *
 import pyqtgraph as pg
 
-import fbl
-import server
+from feedbacklockin import fbl
+from feedbacklockin import server
 
 
 class DoubleEdit(QDoubleSpinBox):
@@ -50,9 +49,9 @@ class MainWindow(QMainWindow):
         self._update_k()
 
         if settings.value('DAQ/dummy', 'true').lower() == 'true':
-            from dummy_daq import Daq
+            from feedbacklockin.dummy_daq import Daq
         else:
-            from daq import Daq
+            from feedbacklockin.daq import Daq
         self._daq = Daq(self._channels, self._npoints)
 
         ics = settings.value('DAQ/input_channels', '').split(',')
@@ -260,7 +259,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
 
-if __name__ == '__main__':
+def Main():
     options = argparse.ArgumentParser()
     options.add_argument('-s', '--settings', type=str,
                          default='dev.ini', help='Location of config ini.')

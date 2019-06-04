@@ -8,7 +8,7 @@ import time
 import numpy as np
 from PySide2.QtCore import *
 
-import tmm
+from feedbacklockin.tmm import TransferMatrixModel
 
 
 class Daq(QObject):
@@ -20,7 +20,7 @@ class Daq(QObject):
         self._channels = channels
         self._points = points
         self._data = np.zeros(points)
-        self._tmat = tmm.TransferMatrixModel(self._channels)
+        self._tmat = TransferMatrixModel(self._channels)
         self._tmat.biasResistorMod(100)
         self._tmat.scale(0.01)
         self._tmat.inv()
