@@ -1,10 +1,3 @@
-'''A multi-terminal lockin amplifier with feedback.
-
-Its intended function is to allow for sourcing of current to contacts of a
-multi-terminal device while simultaneously holding contacts at fixed
-potentials. In particular, it can act to set virtual grounds in the device and
-record the current passing into or out of each channel.
-'''
 from PySide2.QtCore import *
 import numpy as np
 

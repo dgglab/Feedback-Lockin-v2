@@ -1,4 +1,3 @@
-"""Feedback lockin interface made with Qt5 widgets via PySide2."""
 import argparse
 from functools import partial
 import math
@@ -31,12 +30,15 @@ class DoubleEdit(QDoubleSpinBox):
 
 class MainWindow(QMainWindow):
 
+    # This will fire shortly before the program exits. Use it to clean up any
+    # threads and sockets!
     exit = Signal()
 
     def __init__(self, settings):
         QMainWindow.__init__(self)
         self.setWindowTitle("Feedback Lockin")
 
+        # First read basic settings and make the GUI.
         self._channels = int(settings.value('DAQ/channels', 8))
         self._npoints = int(settings.value('FBL/points', 500))
         self._freq = float(settings.value('FBL/frequency', 17.76))
@@ -45,9 +47,11 @@ class MainWindow(QMainWindow):
         self._kp.setValue(float(settings.value('FBL/kp', 0.0)))
         self._averaging.setValue(int(settings.value('FBL/averaging', 1)))
 
+        # Now make the FeedbackLockin.
         self._fbl = fbl.FeedbackLockin(self._channels, self._npoints)
         self._update_k()
 
+        # Now set up the DAQ.
         if settings.value('DAQ/dummy', 'true').lower() == 'true':
             from feedbacklockin.dummy_daq import Daq
         else:
@@ -68,6 +72,7 @@ class MainWindow(QMainWindow):
         self._daq.data_ready.connect(self._update)
         self._daq.init_daq()
 
+        # Now make the TCP server if enabled.
         if settings.value('TCP/enabled', 'false').lower() == 'true':
             port = int(settings.value('TCP/port', 0))
             self._server = server.Server(port)
@@ -83,6 +88,7 @@ class MainWindow(QMainWindow):
         self._daq.start()
 
     def _send_data(self, conn):
+        """Send FBL data to the supplied connection."""
         conn.write(np.concatenate((
             self._fbl.vOuts,
             self._fbl.vIns,
@@ -105,6 +111,7 @@ class MainWindow(QMainWindow):
         self._set_feedback(chan, None)
 
     def _update(self):
+        """Perform one iteration of feedback."""
         self._daq.set_output(self._fbl.sine_out())
         data = self._daq.get_input()
         self._fbl.read_in(data)
@@ -142,6 +149,7 @@ class MainWindow(QMainWindow):
             self._fbl.set_reference(int(cur))
 
     def _init_layout(self):
+        """Make the GUI and hook up the appropriate signals/slots."""
         central_widget = QWidget()
         layout = QVBoxLayout()
 
