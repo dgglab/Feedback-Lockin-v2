@@ -141,12 +141,11 @@ class MainWindow(QMainWindow):
         self._fbl.set_feedback_enabled(channel, enabled)
         self._amp_outs[channel].setEnabled(not enabled)
 
-    def _set_ref(self):
-        cur = self._ref_in.currentText()
-        if cur == 'None':
-            self._fbl.set_reference(-1)
+    def _set_ref(self, text):
+        if text == 'None':
+            self._fbl.set_reference(None)
         else:
-            self._fbl.set_reference(int(cur))
+            self._fbl.set_reference(int(text))
 
     def _init_layout(self):
         """Make the GUI and hook up the appropriate signals/slots."""
@@ -242,6 +241,7 @@ class MainWindow(QMainWindow):
         self._ref_in = QComboBox()
         self._ref_in.addItem('None')
         self._ref_in.addItems(list(map(str, range(self._channels))))
+        self._ref_in.currentTextChanged.connect(self._set_ref)
         settings_layout.addWidget(QLabel('Ref in'), 1, 2)
         settings_layout.addWidget(self._ref_in, 1, 3)
 

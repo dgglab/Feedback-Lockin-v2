@@ -61,7 +61,8 @@ class Daq(QObject):
         out = (xfer + (rand - 0.5) * 0.2)
         for i in range(self._channels):
             out[i] = np.roll(out[i], self._rolls[i])
+        np.clip(out, -10, 10, out=out)
         return out.T
 
     def start(self):
-        self._timer.start(1.0 / self._frequency)
+        self._timer.start(1000.0 / self._frequency)

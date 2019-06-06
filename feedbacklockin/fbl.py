@@ -17,7 +17,7 @@ class FeedbackLockin(QObject):
         QObject.__init__(self)
         self._channels = channels
 
-        self._control_pi = DiscretePI()
+        self._control_pi = DiscretePI(channels)
         self._lockin = LockinCalculator(points)
         self._bias_r = BiasResistor(channels)
         self._sines = SinOutputs(channels, points)
@@ -30,8 +30,7 @@ class FeedbackLockin(QObject):
         self.vIns = np.zeros(channels)
         self.ACins = np.zeros(channels)
         self.Phaseins = np.zeros(channels)
-        self._feedback_on = np.zeros(channels, dtype=bool)
-        self._control_pi.setNparams(channels)
+        self._feedback_on = np.zeros(channels)
 
     def update_amps(self, val, chan):
         self._sines.setSingleAmp(val, chan)
@@ -42,23 +41,22 @@ class FeedbackLockin(QObject):
         self._series_averager.set_averaging(averaging)
 
     def update_setpoint(self, val, chan):
-        self._control_pi.updateSingleSetpoint(val, chan)
+        self._control_pi.set_setpoint(val, chan)
         self.vIns[chan] = val
 
-    def update_k(self, Kint, Kprop):
-        self._control_pi.setKint(Kint)
-        self._control_pi.setKprop(Kprop)
+    def update_k(self, ki, kp):
+        self._control_pi.set_ki(ki)
+        self._control_pi.set_kp(kp)
 
     def set_feedback_enabled(self, chan, enabled):
-        self._feedback_on[chan] = enabled
-        self._bias_r.setZeroSumDisabledAxes(0.5, ~self._feedback_on)
-        self._control_pi.zeroErrors(self._bias_r.reverse())
-        self._control_pi.set_output_enabled(chan, enabled)
+        enabled_int = 1 if enabled else 0
+        self._feedback_on[chan] = enabled_int
+        self._bias_r.setZeroSumDisabledAxes(0.5, 1 - self._feedback_on)
+        self._control_pi.zero_errors(self._bias_r.reverse())
+        self._control_pi.set_output_enabled(chan, enabled_int)
 
     def set_reference(self, chan):
-        # Sets the index of the channel being used as a reference.
-        # If <0 the reference value is zero.
-        self._control_pi.setReferenceIdx(chan)
+        self._control_pi.set_reference(chan)
 
     def sine_out(self):
         out = self._sines.output()
@@ -73,9 +71,9 @@ class FeedbackLockin(QObject):
         return ampsRatio
 
     def read_in(self, data):
-        calcedAmps = self._lockin.calc_amps(data)
+        calced_amps = self._lockin.calc_amps(data)
         self.data = self._series_averager.step(data)
-        avged = self._amp_averager.step(calcedAmps)
+        avged = self._amp_averager.step(calced_amps)
         X = avged[0]
         Y = avged[1]
         self.X = X
@@ -85,19 +83,13 @@ class FeedbackLockin(QObject):
 
         # Setpoint amplitudes calculated. Note that we feedback on the
         # unaveraged results.
-        ampsSetOut = self._control_pi.step(calcedAmps[0])
-
-        # If no feedback, force output to its original value.
-        for i in range(self._channels):
-            if not self._feedback_on[i]:
-                ampsSetOut[i] = self.vOuts[i]
+        pi_outs = self._control_pi.step(calced_amps[0])
+        amps_out = np.where(self._feedback_on, pi_outs, self.vOuts)
 
         # Transform to maintain current conservation.
-        ampsSetOut = self._bias_r.step(ampsSetOut)
+        amps_out = self._bias_r.step(amps_out)
 
         # Updates the output sinewaves.
-        self._sines.setAmps(ampsSetOut)
+        self._sines.setAmps(amps_out)
 
-        for i in range(self._channels):
-            if self._feedback_on[i]:
-                self.vOuts[i] = ampsSetOut[i]
+        self.vOuts = np.where(self._feedback_on, amps_out, self.vOuts)
