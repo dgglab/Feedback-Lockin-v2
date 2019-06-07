@@ -98,10 +98,10 @@ class Daq(QObject):
     def measureDone(self):
         self.data_ready.emit()
 
-    def readIn(self,data):
+    def set_output(self,data):
         self.data = data.astype(np.float64)
 
-    def OutputData(self):
+    def get_input(self):
         return self.dataOut
 
     def runWriteThread(self):

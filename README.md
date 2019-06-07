@@ -12,11 +12,21 @@ while holding them at fixed potentials.
 
 ## Requirements
 
-PySide2, pyqtgraph, PyDAQmx
+Python 3, numpy, PySide2, pyqtgraph, PyDAQmx
+
+## Installation on windows
+
+1. Install python 3 and git.
+1. Run `pip install pipenv`.
+1. `cd path/to/project`.
+1. `pipenv install numpy pyside2 pydaqmx`.
+1. `pipenv install -e git+https://github.com/pyqtgraph/pyqtgraph#egg=pyqtgraph`.
+1. Run from here with `pipenv run python -m feedbacklockin`.
 
 ## How to run
 
-Run with `python -m feedbacklockin`.
+Run with `python -m feedbacklockin` (don't forget pipenv if that's how you
+installed it).
 
 Optionally provide `-s path/to/config.ini`. For instance, to run locally with
 no DAQ card, run `python -m feedbacklockin -s dev.ini`, and to run with the VTI

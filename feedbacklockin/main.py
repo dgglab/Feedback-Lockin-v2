@@ -58,8 +58,10 @@ class MainWindow(QMainWindow):
             from feedbacklockin.daq import Daq
         self._daq = Daq(self._channels, self._npoints)
 
-        ics = settings.value('DAQ/input_channels', '').split(',')
-        ocs = settings.value('DAQ/output_channels', '').split(',')
+        ics = settings.value('DAQ/input_channels', '')
+        ocs = settings.value('DAQ/output_channels', '')
+        if isinstance(ics, list): ics = ','.join(ics)
+        if isinstance(ocs, list): ocs = ','.join(ocs)
         self._daq.set_channels(ics, ocs)
 
         oc = settings.value('DAQ/output_clock', '')
