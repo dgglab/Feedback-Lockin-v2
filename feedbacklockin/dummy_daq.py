@@ -31,6 +31,7 @@ class Daq(QObject):
                                         size=channels)
 
         self._timer = QTimer()
+        self._timer.setTimerType(Qt.PreciseTimer)
         # In a real DAQ card we need to do some processing when the timer
         # fires, but here we do not.
         self._timer.timeout.connect(self.data_ready)

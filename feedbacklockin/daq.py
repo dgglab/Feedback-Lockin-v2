@@ -61,10 +61,10 @@ class Daq(QObject):
             mx.DAQmxCreateTask("", byref(self.outputTaskHandle))
             mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,
                     self.channelOut, "", -10.0, 10.0, mx.DAQmx_Val_Volts, None)
-            mx.DAQmxSetAODataXferReqCond(self.outputTaskHandle, "" ,
+            mx.DAQmxSetAODataXferReqCond(self.outputTaskHandle, "",
                     mx.DAQmx_Val_OnBrdMemEmpty)
             mx.DAQmxCfgSampClkTiming(self.outputTaskHandle,
-                    "OnboardClock", self.rate,mx.DAQmx_Val_Rising,
+                    "OnboardClock", self.rate, mx.DAQmx_Val_Rising,
                     mx.DAQmx_Val_ContSamps, self._points)
 
             # DAQmx Configure Code, Input
@@ -81,7 +81,6 @@ class Daq(QObject):
         pass
 
     def start(self):
-        # DAQmx Start Code
         mx.DAQmxStartTask(self.inputTaskHandle)
         mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points, True, 10.0,
                 mx.DAQmx_Val_GroupByChannel, self.data,byref(self.written),
@@ -95,9 +94,6 @@ class Daq(QObject):
         ReadThread.daemon = True
         ReadThread.start()
 
-    def measureDone(self):
-        self.data_ready.emit()
-
     def set_output(self,data):
         self.data = data.astype(np.float64)
 
@@ -106,14 +102,13 @@ class Daq(QObject):
 
     def runWriteThread(self):
         # infinite loop writing sinewave to buffer everytime the buffer is emptied
-        # sends measureDone() command which emits a callback for the GUI to
         while True:
             try:
                 d1 = np.reshape(self.data.T, (self._channels * self._points, 1))
                 mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points,
                         True, 10.0, mx.DAQmx_Val_GroupByChannel,
                         d1,byref(self.written), None)
-                self.measureDone()
+                self.data_ready.emit()
             except:
                 print("failed to write to DAQ")
 

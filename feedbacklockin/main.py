@@ -12,6 +12,7 @@ import pyqtgraph as pg
 
 from feedbacklockin import fbl
 from feedbacklockin import server
+from feedbacklockin import moving_averager
 
 
 class DoubleEdit(QDoubleSpinBox):
@@ -38,7 +39,6 @@ class MainWindow(QMainWindow):
         QMainWindow.__init__(self)
         self.setWindowTitle("Feedback Lockin")
 
-        # First read basic settings and make the GUI.
         self._channels = int(settings.value('DAQ/channels', 8))
         self._npoints = int(settings.value('FBL/points', 500))
         self._freq = float(settings.value('FBL/frequency', 17.76))
@@ -46,12 +46,12 @@ class MainWindow(QMainWindow):
         self._ki.setValue(float(settings.value('FBL/ki', 0.01)))
         self._kp.setValue(float(settings.value('FBL/kp', 0.0)))
         self._averaging.setValue(int(settings.value('FBL/averaging', 1)))
+        self._freq_avg = moving_averager.MovingAverager(10)
+        self._freq_timer = QElapsedTimer()
 
-        # Now make the FeedbackLockin.
         self._fbl = fbl.FeedbackLockin(self._channels, self._npoints)
         self._update_k()
 
-        # Now set up the DAQ.
         if settings.value('DAQ/dummy', 'true').lower() == 'true':
             from feedbacklockin.dummy_daq import Daq
         else:
@@ -89,6 +89,7 @@ class MainWindow(QMainWindow):
 
     def start(self):
         self._daq.start()
+        self._freq_timer.start()
 
     def _send_data(self, conn):
         """Send FBL data to the supplied connection."""
@@ -127,6 +128,9 @@ class MainWindow(QMainWindow):
                 self._plot_items[i].setData(self._fbl.data[:, i])
             if self._fb_enabled[i].isChecked():
                 self._amp_outs[i].setValue(self._fbl.vOuts[i])
+        elapsed = self._freq_timer.elapsed()
+        self._freq_timer.restart()
+        self._freq_meas_spinbox.setValue(1000.0 / self._freq_avg.step(elapsed))
 
     def _zero_all(self):
         for i in range(self._channels):
@@ -287,8 +291,19 @@ class MainWindow(QMainWindow):
         self._samples_spinbox.setButtonSymbols(QAbstractSpinBox.NoButtons)
         settings_layout.addWidget(self._samples_spinbox, 1, 5)
 
+        status_box = QGroupBox('Status')
+        status_box.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
+        status_layout = QGridLayout()
+        status_box.setLayout(status_layout)
+        status_layout.addWidget(QLabel('Frequency'), 0, 0)
+        self._freq_meas_spinbox = DoubleEdit(read_only=True, clamp=(0, 1000))
+        status_layout.addWidget(self._freq_meas_spinbox, 0, 1)
+
         bottom_half.addWidget(out_box)
-        bottom_half.addWidget(settings_box)
+        botright = QVBoxLayout()
+        botright.addWidget(settings_box)
+        botright.addWidget(status_box)
+        bottom_half.addLayout(botright)
         layout.addLayout(bottom_half)
 
         central_widget.setLayout(layout)
