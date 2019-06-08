@@ -48,6 +48,7 @@ feedback is off.
 * Send `set_feedback CHANNEL ENABLED` to set the feedback setpoint. `ENABLED`
 must be `0` for feedback disabled, and `1` for enabled.
 * Send `autotune` to set PID constants.
+* Send `reset_avg` to reset averaging.
 
 ## Code Overview
 

@@ -19,6 +19,7 @@ class Server(QObject):
     set_ki = Signal(float)
     set_feed = Signal(int, bool)
     autotune = Signal(float)
+    reset_avg = Signal()
 
     def __init__(self, port):
         QObject.__init__(self)
@@ -63,6 +64,8 @@ class Server(QObject):
                     self.autotune.emit(float(l[1]))
                 else:
                     self.autotune.emit(1.0)
+            elif l[0] == 'reset_avg':
+                self.reset_avg.emit()
             else:
                 raise ValueError('command not found')
         except ValueError as e:

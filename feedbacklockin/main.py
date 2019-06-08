@@ -85,6 +85,7 @@ class MainWindow(QMainWindow):
             self._server.set_ki.connect(self._set_ki)
             self._server.set_feed.connect(self._set_feed)
             self._server.autotune.connect(self._fbl.autotune_pid)
+            self._server.reset_avg.connect(self._fbl.reset_avg)
 
     def start(self):
         self._daq.start()

@@ -32,6 +32,10 @@ class FeedbackLockin(QObject):
         self.Phaseins = np.zeros(channels)
         self._feedback_on = np.zeros(channels)
 
+    def reset_avg(self):
+        self._amp_averager.reset()
+        self._series_averager.reset()
+
     def update_amps(self, val, chan):
         self._sines.setSingleAmp(val, chan)
         self.vOuts[chan] = val
