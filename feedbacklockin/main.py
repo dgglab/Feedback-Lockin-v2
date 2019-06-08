@@ -95,7 +95,8 @@ class MainWindow(QMainWindow):
         conn.write(np.concatenate((
             self._fbl.vOuts,
             self._fbl.vIns,
-            self._fbl.X)).tobytes('F'))
+            self._fbl.X,
+            self._fbl.P)).tobytes('F'))
 
     def _set_v(self, chan, v):
         self._setpt_outs[chan].setValue(v)
@@ -122,7 +123,8 @@ class MainWindow(QMainWindow):
         for i in range(self._channels):
             self._v_ins[i].setValue(self._fbl.X[i])
             self._p_ins[i].setValue(self._fbl.P[i])
-            self._plot_items[i].setData(self._fbl.data[:, i])
+            if self._plot_enabled[i].isChecked():
+                self._plot_items[i].setData(self._fbl.data[:, i])
             if self._fb_enabled[i].isChecked():
                 self._amp_outs[i].setValue(self._fbl.vOuts[i])
 
@@ -144,6 +146,12 @@ class MainWindow(QMainWindow):
 
     def _update_averaging(self):
         self._fbl.update_averaging(self._averaging.value())
+
+    def _set_plot_enabled(self, channel, _):
+        if self._plot_enabled[channel].isChecked():
+            self._pw.getPlotItem().addItem(self._plot_items[channel])
+        else:
+            self._pw.getPlotItem().removeItem(self._plot_items[channel])
 
     def _set_feedback(self, channel, _):
         enabled = self._fb_enabled[channel].isChecked()
@@ -178,20 +186,27 @@ class MainWindow(QMainWindow):
         in_box.setLayout(in_layout)
 
         self._v_ins = []
+        self._plot_enabled = []
         self._p_ins = []
         for i in range(math.ceil(self._channels / 8)):
-            in_layout.addWidget(QLabel('Channel'), i*8, 0)
-            in_layout.addWidget(QLabel('Voltage'), i*8 + 1, 0)
-            in_layout.addWidget(QLabel('Phase'), i*8 + 2, 0)
-            for j in range(min(self._channels - i*8, 8)):
+            in_layout.addWidget(QLabel('Channel'), i*3, 0)
+            in_layout.addWidget(QLabel('Voltage'), i*3 + 1, 0)
+            in_layout.addWidget(QLabel('Phase'), i*3 + 2, 0)
+            for j in range(min(self._channels - i*3, 8)):
                 chan = i*8 + j
-                in_layout.addWidget(QLabel(f'{chan}'), i*8, j + 1)
+                chan_layout = QHBoxLayout()
+                chan_layout.addWidget(QLabel(f'{chan}'))
+                pe = QCheckBox()
+                pe.stateChanged.connect(partial(self._set_plot_enabled, chan))
+                self._plot_enabled.append(pe)
+                chan_layout.addWidget(pe)
+                in_layout.addLayout(chan_layout, i*3, j + 1)
                 v_in = DoubleEdit(read_only=True)
                 self._v_ins.append(v_in)
-                in_layout.addWidget(v_in, i*8 + 1, j + 1)
+                in_layout.addWidget(v_in, i*3 + 1, j + 1)
                 p_in = DoubleEdit(read_only=True, clamp=(-180, 180))
                 self._p_ins.append(p_in)
-                in_layout.addWidget(p_in, i*8 + 2, j + 1)
+                in_layout.addWidget(p_in, i*3 + 2, j + 1)
         top_half.addWidget(in_box)
         layout.addLayout(top_half)
 
