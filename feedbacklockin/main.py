@@ -125,6 +125,12 @@ class MainWindow(QMainWindow):
             if self._fb_enabled[i].isChecked():
                 self._amp_outs[i].setValue(self._fbl.vOuts[i])
 
+    def _zero_all(self):
+        for i in range(self._channels):
+            self._set_feed(i, False)
+            self._set_v(i, 0.0)
+            self._set_i(i, 0.0)
+
     def _update_setpoint(self, channel):
         self._fbl.update_setpoint(self._setpt_outs[channel].value(), channel)
 
@@ -199,16 +205,16 @@ class MainWindow(QMainWindow):
         self._setpt_outs = []
         self._fb_enabled = []
         for i in range(math.ceil(self._channels / 8)):
-            out_layout.addWidget(QLabel('Channel'), i*8, 0)
-            out_layout.addWidget(QLabel('Amplitude'), i*8 + 1, 0)
-            out_layout.addWidget(QLabel('Setpoint'), i*8 + 2, 0)
+            out_layout.addWidget(QLabel('Channel'), i*3, 0)
+            out_layout.addWidget(QLabel('Amplitude'), i*3 + 1, 0)
+            out_layout.addWidget(QLabel('Setpoint'), i*3 + 2, 0)
             for j in range(min(self._channels - i*8, 8)):
                 chan = i*8 + j
-                out_layout.addWidget(QLabel(f'{chan}'), i*8, j + 1)
+                out_layout.addWidget(QLabel(f'{chan}'), i*3, j + 1)
                 v_out = DoubleEdit()
                 v_out.editingFinished.connect(partial(self._update_amps, chan))
                 self._amp_outs.append(v_out)
-                out_layout.addWidget(v_out, i*8 + 1, j + 1)
+                out_layout.addWidget(v_out, i*3 + 1, j + 1)
                 fb_layout = QHBoxLayout()
                 fb_out = DoubleEdit()
                 fb_out.editingFinished.connect(partial(self._update_setpoint, chan))
@@ -218,9 +224,13 @@ class MainWindow(QMainWindow):
                 fb_enabled.stateChanged.connect(partial(self._set_feedback, chan))
                 self._fb_enabled.append(fb_enabled)
                 fb_layout.addWidget(fb_enabled)
-                out_layout.addLayout(fb_layout, i*8 + 2, j + 1)
+                out_layout.addLayout(fb_layout, i*3 + 2, j + 1)
+        zero_button = QPushButton("Reset all")
+        zero_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
+        zero_button.clicked.connect(self._zero_all)
+        out_layout.addWidget(zero_button, 0, 9, 3 * math.ceil(self._channels / 8), 1)
 
-        settings_box = QGroupBox('Settings')
+        settings_box = QGroupBox('Controls')
         settings_box.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
         settings_layout = QGridLayout()
         settings_box.setLayout(settings_layout)
