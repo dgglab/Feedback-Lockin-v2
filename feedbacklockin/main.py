@@ -12,7 +12,6 @@ import pyqtgraph as pg
 
 from feedbacklockin import fbl
 from feedbacklockin import server
-from feedbacklockin import moving_averager
 
 
 class DoubleEdit(QDoubleSpinBox):
@@ -46,7 +45,7 @@ class MainWindow(QMainWindow):
         self._ki.setValue(float(settings.value('FBL/ki', 0.01)))
         self._kp.setValue(float(settings.value('FBL/kp', 0.0)))
         self._averaging.setValue(int(settings.value('FBL/averaging', 1)))
-        self._freq_avg = moving_averager.MovingAverager(10)
+        self._updates_since_fps = 0
         self._freq_timer = QElapsedTimer()
 
         self._fbl = fbl.FeedbackLockin(self._channels, self._npoints)
@@ -128,9 +127,13 @@ class MainWindow(QMainWindow):
                 self._plot_items[i].setData(self._fbl.data[:, i])
             if self._fb_enabled[i].isChecked():
                 self._amp_outs[i].setValue(self._fbl.vOuts[i])
+
+        self._updates_since_fps += 1
         elapsed = self._freq_timer.elapsed()
-        self._freq_timer.restart()
-        self._freq_meas_spinbox.setValue(1000.0 / self._freq_avg.step(elapsed))
+        if elapsed > 1000:
+            self._freq_timer.restart()
+            self._freq_meas_spinbox.setValue(1000.0 / elapsed * self._updates_since_fps)
+            self._updates_since_fps = 0
 
     def _zero_all(self):
         for i in range(self._channels):
