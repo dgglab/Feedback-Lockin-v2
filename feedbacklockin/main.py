@@ -39,9 +39,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Feedback Lockin")
 
         self._channels = int(settings.value('DAQ/channels', 8))
-        self._npoints = int(settings.value('FBL/points', 500))
-        self._fbl = fbl.FeedbackLockin(self._channels, self._npoints)
         self._freq = float(settings.value('FBL/frequency', 17.76))
+        points = int(settings.value('FBL/points', 0))
+        max_rate = int(settings.value('FBL/max_rate', 10000))
+        if points == 0:
+            self._npoints = int(max_rate / self._freq * 0.099) * 10
+        else:
+            self._npoints = points
+        self._fbl = fbl.FeedbackLockin(self._channels, self._npoints)
         self._init_layout()
         self._ki.setValue(float(settings.value('FBL/ki', 0.01)))
         self._kp.setValue(float(settings.value('FBL/kp', 0.0)))
