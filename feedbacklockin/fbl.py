@@ -3,7 +3,8 @@ import numpy as np
 
 from feedbacklockin.sin_outs import SinOutputs
 from feedbacklockin.lockin_calc import LockinCalculator
-from feedbacklockin.moving_averager import MovingAverager
+from feedbacklockin.moving_averager import (NoneAverager,
+        ExponentialAverager, SlidingWindowAverager)
 from feedbacklockin.discrete_pi import DiscretePI
 from feedbacklockin.bias_resistor import BiasResistor
 
@@ -23,8 +24,11 @@ class FeedbackLockin(QObject):
         self._sines = SinOutputs(channels, points)
 
         # Average both the amplitudes as well as the raw input data.
-        self._amp_averager = MovingAverager()
-        self._series_averager = MovingAverager()
+        self._avg_type = 0
+        self._averagers = [(NoneAverager(), NoneAverager()),
+                (SlidingWindowAverager(), SlidingWindowAverager()),
+                (ExponentialAverager(), ExponentialAverager())]
+        self._amp_averager, self._series_averager = self._averagers[0] 
 
         self.vOuts = np.zeros(channels)
         self.vIns = np.zeros(channels)
@@ -33,16 +37,18 @@ class FeedbackLockin(QObject):
         self._feedback_on = np.zeros(channels)
 
     def reset_avg(self):
-        self._amp_averager.reset()
-        self._series_averager.reset()
+        for a1, a2 in self._averagers:
+            a1.reset()
+            a2.reset()
 
     def update_amps(self, val, chan):
         self._sines.setSingleAmp(val, chan)
         self.vOuts[chan] = val
 
     def update_averaging(self, averaging):
-        self._amp_averager.set_averaging(averaging)
-        self._series_averager.set_averaging(averaging)
+        for a1, a2 in self._averagers:
+            a1.set_averaging(averaging)
+            a2.set_averaging(averaging)
 
     def update_setpoint(self, val, chan):
         self._control_pi.set_setpoint(val, chan)
@@ -51,6 +57,14 @@ class FeedbackLockin(QObject):
     def update_k(self, ki, kp):
         self._control_pi.set_ki(ki)
         self._control_pi.set_kp(kp)
+
+    def set_averaging_type(self, avg_type):
+        """Options are 0: None, 1: sliding window, and 2: exponential."""
+        if avg_type == self._avg_type:
+            return
+        self._avg_type = avg_type
+        self._amp_averager, self._series_averager = self._averagers[avg_type]
+        self.reset_avg()
 
     def set_feedback_enabled(self, chan, enabled):
         enabled_int = 1 if enabled else 0

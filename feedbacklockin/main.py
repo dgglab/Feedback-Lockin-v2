@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
 
         self._channels = int(settings.value('DAQ/channels', 8))
         self._npoints = int(settings.value('FBL/points', 500))
+        self._fbl = fbl.FeedbackLockin(self._channels, self._npoints)
         self._freq = float(settings.value('FBL/frequency', 17.76))
         self._init_layout()
         self._ki.setValue(float(settings.value('FBL/ki', 0.01)))
@@ -48,7 +49,6 @@ class MainWindow(QMainWindow):
         self._updates_since_fps = 0
         self._freq_timer = QElapsedTimer()
 
-        self._fbl = fbl.FeedbackLockin(self._channels, self._npoints)
         self._update_k()
 
         if settings.value('DAQ/dummy', 'true').lower() == 'true':
@@ -268,17 +268,23 @@ class MainWindow(QMainWindow):
         settings_layout.addWidget(self._kp, 1, 1)
 
         settings_layout.addWidget(QLabel('Averaging'), 0, 2)
+        self._avg_type = QComboBox()
+        self._avg_type.addItems(['None', 'Sliding Window', 'Exponential'])
+        self._avg_type.currentIndexChanged.connect(self._fbl.set_averaging_type)
+        settings_layout.addWidget(self._avg_type, 0, 3)
+
+        settings_layout.addWidget(QLabel('Amount'), 1, 2)
         self._averaging = QSpinBox()
         self._averaging.setMinimum(1)
         self._averaging.valueChanged.connect(self._update_averaging)
-        settings_layout.addWidget(self._averaging, 0, 3)
+        settings_layout.addWidget(self._averaging, 1, 3)
 
         self._ref_in = QComboBox()
         self._ref_in.addItem('None')
         self._ref_in.addItems(list(map(str, range(self._channels))))
         self._ref_in.currentTextChanged.connect(self._set_ref)
-        settings_layout.addWidget(QLabel('Ref in'), 1, 2)
-        settings_layout.addWidget(self._ref_in, 1, 3)
+        settings_layout.addWidget(QLabel('Ref in'), 0, 6)
+        settings_layout.addWidget(self._ref_in, 0, 7)
 
         settings_layout.addWidget(QLabel('Frequency'), 0, 4)
         self._freq_spinbox = DoubleEdit(read_only=True, clamp=(0, 1000))
