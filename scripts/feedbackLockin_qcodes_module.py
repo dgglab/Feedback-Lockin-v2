@@ -71,7 +71,7 @@ class FeedbackLockin(Instrument):
         self.socket.sendall(bytes(f'setI {c} {v}\n', encoding='UTF-8'))
 
 class parseVin(Instrument):
-    # Meta-instrument for reading an input channels
+    # Meta-instrument for reading an input channel
     # from stored data without calling the TCP connection
     # usage example:
     # in1=parseVin('in1',fbl=FBL,chO=1,ampO=1e4)
@@ -82,13 +82,29 @@ class parseVin(Instrument):
             self.ampO=ampO
             self.add_parameter('Vin',get_cmd=self._getVin,unit='V')
             self.add_parameter('Phase',get_cmd=self._getPhase,unit='deg')
-        def _getVin(self):
-            data=self.fbl.stored_data.get();
-            return data[self.chO,2]/self.ampO
-        def _getPhase(self):
-            data=self.fbl.stored_data.get();
-            return data[self.chO,3]        
+    def _getVin(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chO,2]/self.ampO
+    def _getPhase(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chO,3]        
 
+class parseVout(Instrument):
+    # Meta-instrument for reading an output channel
+    # from stored data without calling the TCP connection
+    # usage example:
+    # out1=parseVout('out1',fbl=FBL,chO=1,ampO=1e4)
+    def __init__(self,name,fbl,chO,ampO,**kwargs):
+            super().__init__(name, **kwargs)
+            self.fbl=fbl
+            self.chO=chO
+            self.ampO=ampO
+            self.add_parameter('Vout',get_cmd=self._getVout,unit='V')
+    def _getVout(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chO,0]/self.ampO
+
+        
 class parseR_chA_chB_chI(Instrument):
     # Meta-instrument for reading 3 input channels into a resistance
     # from stored data without calling the TCP connection

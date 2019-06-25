@@ -54,7 +54,7 @@ class SlidingWindowAverager:
     elements in the window.
     """
     def __init__(self, averaging=1):
-        self._window  = collections.deque()
+        self._window = collections.deque()
         self.set_averaging(averaging)
 
     def reset(self):
