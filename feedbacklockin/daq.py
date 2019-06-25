@@ -1,13 +1,12 @@
 '''
-daq.py defines Daq objects which serve as the low-level
-interface to the ni DAQ cards used for continuous reading and writing. It has written-in
-connections of external clock signals that are to be hardwired between output and input
-DAQ cards. The basic function is that it starts two parallel threads that handle output
-and inputs separately. The output DAQ is set-up to only write when its buffer is empty
-so that there cannot be a build-up of more than a single cycle delay. The input DAQ takes
-its clock signal from the output DAQ and is started first, so that they are synchronized.
-Before running this, NI drivers as well as pyDAQmx need to be installed.
-TODO(spxtr): Implement this in a less racy manner.
+Daq objects serve as the low-level interface to the NI DAQ cards used for
+continuous reading and writing. It has written-in connections of external clock
+signals that are to be hardwired between output and input DAQ cards. The basic
+function is that it starts two parallel threads that handle output and inputs
+separately. The output DAQ is set-up to only write when its buffer is empty so
+that there cannot be a build-up of more than a single cycle delay. The input
+DAQ takes its clock signal from the output DAQ and is started first, so that
+they are synchronized.
 '''
 from ctypes import byref, c_int32
 import threading
@@ -26,101 +25,112 @@ class Daq(QObject):
         QObject.__init__(self)
         self._channels = channels
         self._points = points
-        self.data = np.zeros((self._points, self._channels))
-        self.dataOut = np.zeros((self._points, self._channels))
 
     def set_clocks(self, oc, occhan, icchan):
-        self.outputClock = oc
-        self.outputClockChannel = occhan
-        self.inputClockChannel = icchan
+        self._oc = oc
+        self._occhan = occhan
+        self._icchan = icchan
 
     def set_frequency(self, freq):
-        self.frequency = freq
-        self.rate = self.frequency * self._points
+        self._rate = freq * self._points
 
     def set_channels(self, channels_in, channels_out):
-        self.channelIn = channels_in
-        self.channelOut = channels_out
+        self._channels_in = channels_in
+        self._channels_out = channels_out
 
     def init_daq(self):
-        self.inputTaskHandle = mx.TaskHandle()
-        self.outputTaskHandle = mx.TaskHandle()
-        self.read = c_int32()
-        self.written = c_int32()
+        self._input_task = mx.TaskHandle()
+        self._output_task = mx.TaskHandle()
 
-        self.data = np.zeros((self._points, self._channels), dtype=np.float64)
+        mx.DAQmxConnectTerms(self._oc, self._occhan,
+                mx.DAQmx_Val_DoNotInvertPolarity)
+        mx.DAQmxCreateTask("", byref(self._output_task))
+        mx.DAQmxCreateAOVoltageChan(self._output_task, self._channels_out, "",
+                -10.0, 10.0, mx.DAQmx_Val_Volts, None)
+        mx.DAQmxSetAODataXferReqCond(self._output_task, "",
+                mx.DAQmx_Val_OnBrdMemEmpty)
+        mx.DAQmxCfgSampClkTiming(self._output_task, "OnboardClock", self._rate,
+                mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps, self._points)
 
-        self.dataOut = np.zeros((self._points, self._channels), dtype=np.float64)
-        self.tempData = np.zeros(self._points * (self._channels + 1),
-                dtype=np.float64)
-        try:
-            # DAQmx Configure Code, Output
-            mx.DAQmxConnectTerms(self.outputClock,
-                    self.outputClockChannel,
-                    mx.DAQmx_Val_DoNotInvertPolarity)
-            mx.DAQmxCreateTask("", byref(self.outputTaskHandle))
-            mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,
-                    self.channelOut, "", -10.0, 10.0, mx.DAQmx_Val_Volts, None)
-            mx.DAQmxSetAODataXferReqCond(self.outputTaskHandle, "",
-                    mx.DAQmx_Val_OnBrdMemEmpty)
-            mx.DAQmxCfgSampClkTiming(self.outputTaskHandle,
-                    "OnboardClock", self.rate, mx.DAQmx_Val_Rising,
-                    mx.DAQmx_Val_ContSamps, self._points)
-
-            # DAQmx Configure Code, Input
-            mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
-            mx.DAQmxAddGlobalChansToTask(self.inputTaskHandle, self.channelIn)
-            mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, self.inputClockChannel,
-                    self.rate, mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps,
-                    self._points)
-            mx.DAQmxSetReadReadAllAvailSamp(self.inputTaskHandle, True)
-        except mx.DAQError as err:
-            print("DAQmx Error: %s"%err)
+        mx.DAQmxCreateTask("", byref(self._input_task))
+        mx.DAQmxAddGlobalChansToTask(self._input_task, self._channels_in)
+        mx.DAQmxCfgSampClkTiming(self._input_task, self._icchan, self._rate,
+                mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps, self._points)
+        mx.DAQmxSetReadReadAllAvailSamp(self._input_task, True)
 
     def stop(self):
-        pass
+        self._write_thread.requestInterruption()
+        self._read_thread.requestInterruption()
 
     def start(self):
-        mx.DAQmxStartTask(self.inputTaskHandle)
-        mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points, True, 10.0,
-                mx.DAQmx_Val_GroupByChannel, self.data,byref(self.written),
-                None)
+        self._write_thread = WriteThread(self._channels, self._points, self._output_task)
+        self._write_thread.start()
 
-        WriteThread = threading.Thread(target=self.runWriteThread, args=())
-        WriteThread.daemon = True
-        WriteThread.start()
+        self._read_thread = ReadThread(self._channels, self._points, self._input_task)
+        self._read_thread.start()
 
-        ReadThread = threading.Thread(target=self.runReadThread, args=())
-        ReadThread.daemon = True
-        ReadThread.start()
-
-    def set_output(self,data):
-        self.data = data.astype(np.float64)
+    def set_output(self, data):
+        self._write_thread.set_output(data)
 
     def get_input(self):
-        return self.dataOut
+        return self._read_thread.get_input()
 
-    def runWriteThread(self):
-        # infinite loop writing sinewave to buffer everytime the buffer is emptied
-        while True:
-            try:
-                d1 = np.reshape(self.data.T, (self._channels * self._points, 1))
-                mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points,
-                        True, 10.0, mx.DAQmx_Val_GroupByChannel,
-                        d1,byref(self.written), None)
-                self.data_ready.emit()
-            except:
-                print("failed to write to DAQ")
 
-    def runReadThread(self):
-        # infinite loop reading sinewave and updating the dataOut variable
-        while True:
-            try:
-                mx.DAQmxReadAnalogF64(self.inputTaskHandle, self._points, 10.0,
-                        mx.DAQmx_Val_GroupByChannel, self.tempData,
-                        self._points * (self._channels + 1), byref(self.read),
-                        None)
-                self.dataOut = np.reshape(self.tempData[self._points:],
-                        (self._points, self._channels), order='F')
-            except:
-                print("failed to read from DAQ")
+class WriteThread(QThread):
+
+    data_ready = Signal()
+
+    def __init__(self, channels, points, task):
+        QThread.__init__(self)
+        self._channels = channels
+        self._points = points
+        self._output_task = task
+        self._written = c_int32()
+        self._data_in = np.zeros((points, channels), dtype=np.float64)
+        self._mut = QMutex()
+
+    def set_output(self,data):
+        with QMutexLocker(self._mut):
+            self._data_in = np.copy(data.astype(np.float64))
+
+    def run(self):
+        with QMutexLocker(self._mut):
+            mx.DAQmxWriteAnalogF64(self._output_task, self._points, True, 10.0,
+                mx.DAQmx_Val_GroupByChannel, self._data_in, byref(self._written),
+                None)
+
+        while not self.isInterruptionRequested():
+            with QMutexLocker(self._mut):
+                d_copy = np.copy(self._data_in)
+            d = np.reshape(d_copy.T, (self._channels * self._points, 1))
+            mx.DAQmxWriteAnalogF64(self._output_task, self._points,
+                    True, 10.0, mx.DAQmx_Val_GroupByChannel,
+                    d, byref(self._written), None)
+            self.data_ready.emit()
+
+
+class ReadThread(QThread):
+    def __init__(self, channels, points, task):
+        QThread.__init__(self)
+        self._channels = channels
+        self._points = points
+        self._output_task = task
+        self._read = c_int32()
+        self._data_out = np.zeros((points, channels), dtype=np.float64)
+        self._mut = QMutex()
+
+    def get_input(self):
+        with QMutexLocker(self._mut):
+            return np.copy(self._data_out)
+
+    def run(self):
+        mx.DAQmxStartTask(self._input_task)
+        temp_data = np.zeros(self._points * (self._channels + 1), dtype=np.float64)
+        while not self.isInterruptionRequested():
+            mx.DAQmxReadAnalogF64(self._input_task, self._points, 10.0,
+                    mx.DAQmx_Val_GroupByChannel, temp_data,
+                    self._points * (self._channels + 1), byref(self._read),
+                    None)
+            with QMutexLocker(self._mut):
+                self._data_out = np.reshape(temp_data[self._points:],
+                    (self._points, self._channels), order='F')
