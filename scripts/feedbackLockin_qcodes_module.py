@@ -1,4 +1,4 @@
-# %load C:\Users\dgglab\Desktop\Feedback-Lockin-v2\feedbackLockin_qcodes_module.py
+# %load C:\Users\dgglab\Desktop\Feedback-Lockin-v2\scripts\feedbackLockin_qcodes_module.py
 import time
 import numpy as np
 import socket
@@ -52,7 +52,10 @@ class FeedbackLockin(Instrument):
         data=data.reshape(self.nChannels,self.nVars, order='F')
         self.data=data
         return data
-
+    
+    def reset_averaging(self):
+        self.socket.sendall(b'reset_avg\n');
+    
     def _get_stored_data(self):
         data=self.data
         return data
@@ -126,7 +129,7 @@ class parseR_chA_chB_chI(Instrument):
         self.add_parameter('VB',get_cmd=self._getVB,unit='V')
         self.add_parameter('PhaseA',get_cmd=self._getPhaseA,unit='deg')
         self.add_parameter('PhaseB',get_cmd=self._getPhaseB,unit='deg')
-        self.add_parameter('PhaseI',get_cmd=self._getPhaseB,unit='deg')
+        self.add_parameter('PhaseI',get_cmd=self._getPhaseI,unit='deg')
         
     def _getR(self):
         data=self.fbl.stored_data.get();
@@ -150,6 +153,41 @@ class parseR_chA_chB_chI(Instrument):
         data=self.fbl.stored_data.get();
         return data[self.chI,3]
 
+class parseR_chA_chI(Instrument):
+    # Meta-instrument for reading 2 input channels (A-B and Isrc) into a resistance
+    # from stored data without calling the TCP connection
+    # usage example:
+    # Rxx=getR_chA_chI('Rxx',fbl=FBL,chA=0,ampA=1e4,chI=2,ampI=1e5,R2GND=470)
+    def __init__(self,name,fbl,chA,ampA,chI,ampI,R2GND,**kwargs):
+        super().__init__(name, **kwargs)
+        self.fbl=fbl
+        self.chA=chA
+        self.ampA=ampA
+        self.chI=chI       
+        self.ampI= ampI       
+        self.R2GND=R2GND
+        self.add_parameter('R',get_cmd=self._getR,unit='Ohms') 
+        self.add_parameter('I',get_cmd=self._getI,unit='A') 
+        self.add_parameter('VA',get_cmd=self._getVA,unit='V')
+        self.add_parameter('PhaseA',get_cmd=self._getPhaseA,unit='deg')
+        self.add_parameter('PhaseI',get_cmd=self._getPhaseI,unit='deg')
+        
+    def _getR(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chA,2]/self.ampA/(data[self.chI,2]/self.ampI/self.R2GND)
+    def _getI(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chI,2]/self.ampI/self.R2GND
+    def _getVA(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chA,2]/self.ampA
+    def _getPhaseA(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chA,3]
+    def _getPhaseI(self):
+        data=self.fbl.stored_data.get();
+        return data[self.chI,3]    
+    
 class parseT_OCT(Instrument):
     # Meta-instrument for converting resistance from another meta-instrument into temperature, using a calibration file 
     # usage example:
@@ -161,6 +199,11 @@ class parseT_OCT(Instrument):
         self.R=R
         self.cal=np.loadtxt(calfilename,skiprows=2)
         self.add_parameter('Toct',get_cmd=self._get_Toct,unit='K')
+        self.add_parameter('Roct',get_cmd=self._get_Roct,unit='Ohms')
+
+    def _get_Roct(self):
+        Roct = self.R.R.get()
+        return Roct
     def _get_Toct(self):
         Roct = self.R.R.get()
         return np.interp(Roct,np.flipud(self.cal[:,1]),np.flipud(self.cal[:,0]));

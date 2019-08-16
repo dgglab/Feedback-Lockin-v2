@@ -32,7 +32,7 @@ class FeedbackLockin(QObject):
 
         self.vOuts = np.zeros(channels)
         self.vIns = np.zeros(channels)
-        self.ACins = np.zeros(channels)
+        self.avged = np.zeros(channels)
         self.Phaseins = np.zeros(channels)
         self._feedback_on = np.zeros(channels)
 
@@ -84,16 +84,16 @@ class FeedbackLockin(QObject):
     def autotune_pid(self, scaleFactor):
         if np.max(np.abs(self.vOuts)) > .001:
             ampsRatio = (scaleFactor * np.max(np.abs(self.vOuts))
-                / np.max(np.abs(self.vIns)))
-            self._control_pi.setKint(ampsRatio)
+                / np.max(np.abs(self.avged[0])))
+            self._control_pi.set_ki(ampsRatio)
         return ampsRatio
 
     def read_in(self, data):
         calced_amps = self._lockin.calc_amps(data)
         self.data = self._series_averager.step(data)
-        avged = self._amp_averager.step(calced_amps)
-        X = avged[0]
-        Y = avged[1]
+        self.avged = self._amp_averager.step(calced_amps)
+        X = self.avged[0]
+        Y = self.avged[1]
         self.X = X
         self.Y = Y
         self.R = np.sqrt(X*X + Y*Y)
