@@ -14,6 +14,7 @@ from PySide2.QtNetwork import QTcpServer, QHostAddress, QTcpSocket
 class Server(QObject):
 
     send_data = Signal(QTcpSocket)
+    send_freq = Signal(QTcpSocket)
     set_v = Signal(int, float)
     set_i = Signal(int, float)
     set_ki = Signal(float)
@@ -51,6 +52,8 @@ class Server(QObject):
         try:
             if l[0] == 'sendData' or l[0] == 'send_data':
                 self.send_data.emit(conn)
+            elif l[0] == 'send_freq':
+                self.send_freq.emit(conn)
             elif l[0] == 'setV' or l[0] == 'set_setpoint':
                 self.set_v.emit(int(l[1]), float(l[2]))
             elif l[0] == 'setI' or l[0] == 'set_amplitude':

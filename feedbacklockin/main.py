@@ -84,6 +84,7 @@ class MainWindow(QMainWindow):
             self._server = server.Server(port)
             self.exit.connect(self._server.close)
             self._server.send_data.connect(self._send_data)
+            self._server.send_freq.connect(self._send_freq)
             self._server.set_v.connect(self._set_v)
             self._server.set_i.connect(self._set_i)
             self._server.set_ki.connect(self._set_ki)
@@ -102,6 +103,10 @@ class MainWindow(QMainWindow):
             self._fbl.vIns,
             self._fbl.X,
             self._fbl.P)).tobytes('F'))
+
+    def _send_freq(self, conn):
+        """Send FBL frequency to the supplied connection."""
+        conn.write(f'{self._freq:.3f}')
 
     def _set_v(self, chan, v):
         self._setpt_outs[chan].setValue(v)
