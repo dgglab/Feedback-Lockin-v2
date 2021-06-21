@@ -101,7 +101,8 @@ class MainWindow(QMainWindow):
             self._fbl.vOuts,
             self._fbl.vIns,
             self._fbl.X,
-            self._fbl.P)).tobytes('F'))
+            self._fbl.P,
+            self._fbl.DC)).tobytes('F'))
 
     def _set_v(self, chan, v):
         self._setpt_outs[chan].setValue(v)
