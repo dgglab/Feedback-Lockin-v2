@@ -62,6 +62,7 @@ class Daq(QObject):
         rand = np.random.randn(self._channels, self._points)
         out = (xfer + (rand - 0.5) * 0.2)
         for i in range(self._channels):
+
             out[i] = np.roll(out[i], self._rolls[i]) + self._dc_offs[i]
         np.clip(out, -10, 10, out=out)
         return out.T

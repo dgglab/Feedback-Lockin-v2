@@ -40,7 +40,7 @@ from external processes. Terminate each command with a newline. Spaces delimit
 arguments.
 
 * In response to `send_data`, the lockin will respond with output amplitudes,
-input voltages, X, phase, and DC offset in an array with Fortran ordering.
+X, and phase in an array with Fortran ordering.
 * Send `set_setpoint CHANNEL VALUE` to set the feedback setpoint of the given
 channel (integer) to the given value (float).
 * Send `set_amplitude CHANNEL VALUE` to set the channel output amplitude if

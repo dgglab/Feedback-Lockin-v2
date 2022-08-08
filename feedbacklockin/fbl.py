@@ -25,6 +25,7 @@ class FeedbackLockin(QObject):
 
         # Average both the amplitudes as well as the raw input data.
         self._avg_type = 0
+
         # TODO: This is a bit of a mess.
         self._averagers = [(NoneAverager(), NoneAverager(), NoneAverager()),
                 (SlidingWindowAverager(), SlidingWindowAverager(), SlidingWindowAverager()),
@@ -38,6 +39,7 @@ class FeedbackLockin(QObject):
         self._feedback_on = np.zeros(channels)
 
     def reset_avg(self):
+
         for a1, a2, a3 in self._averagers:
             a1.reset()
             a2.reset()
@@ -48,6 +50,7 @@ class FeedbackLockin(QObject):
         self.vOuts[chan] = val
 
     def update_averaging(self, averaging):
+
         for a1, a2, a3 in self._averagers:
             a1.set_averaging(averaging)
             a2.set_averaging(averaging)
@@ -91,7 +94,8 @@ class FeedbackLockin(QObject):
             self._control_pi.set_ki(ampsRatio)
         return ampsRatio
 
-    def read_in(self, data):
+    def read_in(self, data)
+
         self.DC = self._dc_averager.step(np.mean(data, axis=0))
         calced_amps = self._lockin.calc_amps(data)
         self.data = self._series_averager.step(data)

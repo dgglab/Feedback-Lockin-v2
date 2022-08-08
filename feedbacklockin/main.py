@@ -84,9 +84,11 @@ class MainWindow(QMainWindow):
             self._server = server.Server(port)
             self.exit.connect(self._server.close)
             self._server.send_data.connect(self._send_data)
+            self._server.send_fbState.connect(self._send_fbState)
             self._server.set_v.connect(self._set_v)
             self._server.set_i.connect(self._set_i)
             self._server.set_ki.connect(self._set_ki)
+            self._server.set_cf.connect(self._fbl._bias_r.setCorrectionFactor)
             self._server.set_feed.connect(self._set_feed)
             self._server.autotune.connect(self._fbl.autotune_pid)
             self._server.reset_avg.connect(self._fbl.reset_avg)
@@ -101,8 +103,12 @@ class MainWindow(QMainWindow):
             self._fbl.vOuts,
             self._fbl.vIns,
             self._fbl.X,
-            self._fbl.P,
+            self._fbl.P)).tobytes('F'))
             self._fbl.DC)).tobytes('F'))
+
+    def _send_fbState(self, conn):
+        """Send the feedback state of the 32 channels (0 = off, 1 = on) to the supplied connection."""
+        conn.write(self._fbl._feedback_on.tobytes('F'))
 
     def _set_v(self, chan, v):
         self._setpt_outs[chan].setValue(v)

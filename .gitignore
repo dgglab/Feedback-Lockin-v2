@@ -102,3 +102,7 @@ benchmarking/results/
 
 # Ignore .db files that are generated for some tests
 qcodes/tests/dataset/fixtures/db_files/*
+
+backups
+*.bak
+
