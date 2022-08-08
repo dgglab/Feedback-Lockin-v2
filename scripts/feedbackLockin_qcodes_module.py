@@ -1,3 +1,4 @@
+
 # %load C:\Users\dgglab\Desktop\Feedback-Lockin-v2\scripts\feedbackLockin_qcodes_module.py
 import time
 import numpy as np
@@ -16,7 +17,8 @@ class FeedbackLockin(Instrument):
     """
     Draft driver for the Feedback Lockin custom instrument (version 2)
     Evgeny Mikheev, 19/05/26;
-    Han H. updated 8/7/22 
+    Han Hiller updated 8/7/22 
+
 	# usage example:
 	# FBL = FeedbackLockin('FBL', TCPport=10000)
 	# FBL.connectTCP()
@@ -115,6 +117,7 @@ class FeedbackLockin(Instrument):
         
         self.socket.sendall(b'sendData\n')
         time.sleep(self.standardWaitTime)
+
         TCPdata = self.socket.recv(self.nVars*8*self.nChannels);
         data=np.array(array.array('d',TCPdata))
         data=data.reshape(self.nChannels,self.nVars, order='F')
@@ -257,19 +260,21 @@ class parseVin(Instrument):
     # from stored data without calling the TCP connection
     # usage example:
     # in1=parseVin('in1',fbl=FBL,chO=1,ampO=1e4)
-    def __init__(self,name,fbl,chI,ampI,**kwargs):
+
+    def __init__(self,name,fbl,chO,ampO,**kwargs):
             super().__init__(name, **kwargs)
             self.fbl=fbl
-            self.chI=chI
-            self.ampI=ampI
+            self.chO=chO
+            self.ampO=ampO
             self.add_parameter('Vin',get_cmd=self._getVin,unit='V')
             self.add_parameter('Phase',get_cmd=self._getPhase,unit='deg')
     def _getVin(self):
         data=self.fbl.stored_data.get();
-        return data[self.chI,2]/self.ampI
+
+        return data[self.chO,2]/self.ampO
     def _getPhase(self):
         data=self.fbl.stored_data.get();
-        return data[self.chI,3]        
+        return data[self.chO,3]        
 
 class parseVout(Instrument):
     # Meta-instrument for reading an output channel

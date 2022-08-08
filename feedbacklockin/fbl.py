@@ -25,10 +25,12 @@ class FeedbackLockin(QObject):
 
         # Average both the amplitudes as well as the raw input data.
         self._avg_type = 0
-        self._averagers = [(NoneAverager(), NoneAverager()),
-                (SlidingWindowAverager(), SlidingWindowAverager()),
-                (ExponentialAverager(), ExponentialAverager())]
-        self._amp_averager, self._series_averager = self._averagers[0] 
+
+        # TODO: This is a bit of a mess.
+        self._averagers = [(NoneAverager(), NoneAverager(), NoneAverager()),
+                (SlidingWindowAverager(), SlidingWindowAverager(), SlidingWindowAverager()),
+                (ExponentialAverager(), ExponentialAverager(), ExponentialAverager())]
+        self._amp_averager, self._series_averager, self._dc_averager = self._averagers[0] 
 
         self.vOuts = np.zeros(channels)
         self.vIns = np.zeros(channels)
@@ -37,18 +39,22 @@ class FeedbackLockin(QObject):
         self._feedback_on = np.zeros(channels)
 
     def reset_avg(self):
-        for a1, a2 in self._averagers:
+
+        for a1, a2, a3 in self._averagers:
             a1.reset()
             a2.reset()
+            a3.reset()
 
     def update_amps(self, val, chan):
         self._sines.setSingleAmp(val, chan)
         self.vOuts[chan] = val
 
     def update_averaging(self, averaging):
-        for a1, a2 in self._averagers:
+
+        for a1, a2, a3 in self._averagers:
             a1.set_averaging(averaging)
             a2.set_averaging(averaging)
+            a3.set_averaging(averaging)
 
     def update_setpoint(self, val, chan):
         self._control_pi.set_setpoint(val, chan)
@@ -60,17 +66,16 @@ class FeedbackLockin(QObject):
 
     def set_averaging_type(self, avg_type):
         """Options are 0: None, 1: sliding window, and 2: exponential."""
-        if avg_type == self._avg_type:
+        if avg_type == self._avg_type or avg_type < 0 or avg_type > 2:
             return
         self._avg_type = avg_type
-        self._amp_averager, self._series_averager = self._averagers[avg_type]
+        self._amp_averager, self._series_averager, self._dc_averager = self._averagers[avg_type]
         self.reset_avg()
 
     def set_feedback_enabled(self, chan, enabled):
         enabled_int = 1 if enabled else 0
         self._feedback_on[chan] = enabled_int
-        
-        self._bias_r.setZeroSumDisabledAxes(1 - self._feedback_on)
+        self._bias_r.setZeroSumDisabledAxes(0.5, 1 - self._feedback_on)
         self._control_pi.zero_errors(self._bias_r.reverse())
         self._control_pi.set_output_enabled(chan, enabled_int)
 
@@ -89,7 +94,9 @@ class FeedbackLockin(QObject):
             self._control_pi.set_ki(ampsRatio)
         return ampsRatio
 
-    def read_in(self, data):
+    def read_in(self, data)
+
+        self.DC = self._dc_averager.step(np.mean(data, axis=0))
         calced_amps = self._lockin.calc_amps(data)
         self.data = self._series_averager.step(data)
         self.avged = self._amp_averager.step(calced_amps)

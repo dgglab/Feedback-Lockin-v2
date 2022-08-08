@@ -24,6 +24,7 @@ class Daq(QObject):
         self._tmat.biasResistorMod(100)
         self._tmat.scale(0.01)
         self._tmat.inv()
+        self._dc_offs = np.random.randn(self._channels)
 
         # Add a small random phase lag to each input by shifting each channel's
         # output by a small amount.
@@ -61,7 +62,8 @@ class Daq(QObject):
         rand = np.random.randn(self._channels, self._points)
         out = (xfer + (rand - 0.5) * 0.2)
         for i in range(self._channels):
-            out[i] = np.roll(out[i], self._rolls[i])
+
+            out[i] = np.roll(out[i], self._rolls[i]) + self._dc_offs[i]
         np.clip(out, -10, 10, out=out)
         return out.T
 

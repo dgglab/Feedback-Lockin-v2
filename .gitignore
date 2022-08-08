@@ -105,3 +105,4 @@ qcodes/tests/dataset/fixtures/db_files/*
 
 backups
 *.bak
+

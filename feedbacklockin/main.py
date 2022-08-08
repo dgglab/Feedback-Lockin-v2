@@ -19,7 +19,7 @@ class DoubleEdit(QDoubleSpinBox):
     def __init__(self, initial=0.0, read_only=False, clamp=(-10, 10)):
         QDoubleSpinBox.__init__(self)
         self.setRange(*clamp)
-        self.setDecimals(6)
+        self.setDecimals(3)
         self.setValue(initial)
         self.setReadOnly(read_only)
         if read_only:
@@ -104,7 +104,8 @@ class MainWindow(QMainWindow):
             self._fbl.vIns,
             self._fbl.X,
             self._fbl.P)).tobytes('F'))
-            
+            self._fbl.DC)).tobytes('F'))
+
     def _send_fbState(self, conn):
         """Send the feedback state of the 32 channels (0 = off, 1 = on) to the supplied connection."""
         conn.write(self._fbl._feedback_on.tobytes('F'))
@@ -263,7 +264,6 @@ class MainWindow(QMainWindow):
         zero_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         zero_button.clicked.connect(self._zero_all)
         out_layout.addWidget(zero_button, 0, 9, 3 * math.ceil(self._channels / 8), 1)
-        
 
         settings_box = QGroupBox('Controls')
         settings_box.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))

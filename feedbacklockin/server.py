@@ -54,7 +54,7 @@ class Server(QObject):
         l = conn.readLine().data().decode('utf-8').strip().split(' ')
         try:
             if l[0] == 'sendData' or l[0] == 'send_data':
-                self.send_data.emit(conn)
+                self.send_data.emit(conn
             elif l[0] == 'sendChannel' or l[0] == 'send_channel': # some issue here
                 self.send_channel.emit(conn, int(l[1]))
             elif l[0]== 'send_fbState' or l[0] == 'send_feedackState':
