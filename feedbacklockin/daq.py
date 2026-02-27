@@ -11,6 +11,7 @@ TODO(spxtr): Implement this in a less racy manner.
 '''
 from ctypes import byref, c_int32
 import threading
+import traceback
 import time
 
 import numpy as np
@@ -53,11 +54,11 @@ class Daq(QObject):
         self.dataOut = np.zeros((self._points, self._channels), dtype=np.float64)
         self.tempData = np.zeros(self._points * (self._channels + 1),
                 dtype=np.float64)
+
+        _BUF_PERIODS = 4
+
         try:
             # DAQmx Configure Code, Output
-            mx.DAQmxConnectTerms(self.outputClock,
-                    self.outputClockChannel,
-                    mx.DAQmx_Val_DoNotInvertPolarity)
             mx.DAQmxCreateTask("", byref(self.outputTaskHandle))
             mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,
                     self.channelOut, "", -10.0, 10.0, mx.DAQmx_Val_Volts, None)
@@ -65,15 +66,21 @@ class Daq(QObject):
                     mx.DAQmx_Val_OnBrdMemEmpty)
             mx.DAQmxCfgSampClkTiming(self.outputTaskHandle,
                     "OnboardClock", self.rate, mx.DAQmx_Val_Rising,
-                    mx.DAQmx_Val_ContSamps, self._points)
+                    mx.DAQmx_Val_ContSamps, self._points * _BUF_PERIODS)
+
+            # Route output sample clock to PFI terminal AFTER task is
+            # configured. Newer NI-DAQmx drivers can clear routes made
+            # before the task that owns the signal exists.
+            mx.DAQmxConnectTerms(self.outputClock,
+                    self.outputClockChannel,
+                    mx.DAQmx_Val_DoNotInvertPolarity)
 
             # DAQmx Configure Code, Input
             mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
             mx.DAQmxAddGlobalChansToTask(self.inputTaskHandle, self.channelIn)
             mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, self.inputClockChannel,
                     self.rate, mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps,
-                    self._points)
-            mx.DAQmxSetReadReadAllAvailSamp(self.inputTaskHandle, True)
+                    self._points * _BUF_PERIODS)
         except mx.DAQError as err:
             print("DAQmx Error: %s"%err)
 
@@ -81,10 +88,17 @@ class Daq(QObject):
         pass
 
     def start(self):
-        mx.DAQmxStartTask(self.inputTaskHandle)
-        mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points, True, 10.0,
-                mx.DAQmx_Val_GroupByChannel, self.data,byref(self.written),
+        # Pre-fill the output buffer BEFORE starting either task.
+        mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points, False, 10.0,
+                mx.DAQmx_Val_GroupByChannel, self.data, byref(self.written),
                 None)
+
+        # Start input first — it's waiting on external clock edges from
+        # the output, so it arms but doesn't acquire yet.
+        mx.DAQmxStartTask(self.inputTaskHandle)
+        # Now start the output explicitly. This begins generating the
+        # sample clock that drives both cards.
+        mx.DAQmxStartTask(self.outputTaskHandle)
 
         WriteThread = threading.Thread(target=self.runWriteThread, args=())
         WriteThread.daemon = True
@@ -106,11 +120,12 @@ class Daq(QObject):
             try:
                 d1 = np.reshape(self.data.T, (self._channels * self._points, 1))
                 mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points,
-                        True, 10.0, mx.DAQmx_Val_GroupByChannel,
-                        d1,byref(self.written), None)
+                        False, 10.0, mx.DAQmx_Val_GroupByChannel,
+                        d1, byref(self.written), None)
                 self.data_ready.emit()
-            except:
-                print("failed to write to DAQ")
+            except Exception as e:
+                print(f"failed to write to DAQ: {e}")
+                traceback.print_exc()
 
     def runReadThread(self):
         # infinite loop reading sinewave and updating the dataOut variable
@@ -122,5 +137,6 @@ class Daq(QObject):
                         None)
                 self.dataOut = np.reshape(self.tempData[self._points:],
                         (self._points, self._channels), order='F')
-            except:
-                print("failed to read from DAQ")
+            except Exception as e:
+                print(f"failed to read from DAQ: {e}")
+                traceback.print_exc()
