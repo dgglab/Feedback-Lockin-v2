@@ -86,7 +86,7 @@ class Daq(QObject):
         # DAQmx Configure Code, Input
         mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
         mx.DAQmxCreateAIVoltageChan(self.inputTaskHandle,
-                self.channelIn, "", mx.DAQmx_Val_Diff,
+                self.channelIn, "", mx.DAQmx_Val_NRSE,
                 -10.0, 10.0, mx.DAQmx_Val_Volts, None)
         mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, self.inputClockChannel,
                 self.rate, mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps,
