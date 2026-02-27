@@ -57,32 +57,39 @@ class Daq(QObject):
 
         _BUF_PERIODS = 4
 
-        try:
-            # DAQmx Configure Code, Output
-            mx.DAQmxCreateTask("", byref(self.outputTaskHandle))
-            mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,
-                    self.channelOut, "", -10.0, 10.0, mx.DAQmx_Val_Volts, None)
-            mx.DAQmxSetAODataXferReqCond(self.outputTaskHandle, "",
-                    mx.DAQmx_Val_OnBrdMemEmpty)
-            mx.DAQmxCfgSampClkTiming(self.outputTaskHandle,
-                    "OnboardClock", self.rate, mx.DAQmx_Val_Rising,
-                    mx.DAQmx_Val_ContSamps, self._points * _BUF_PERIODS)
+        print(f"[DAQ init] channels={self._channels} points={self._points} "
+              f"rate={self.rate}")
+        print(f"[DAQ init] output_channels='{self.channelOut}'")
+        print(f"[DAQ init] input_channels='{self.channelIn}'")
+        print(f"[DAQ init] clock route: '{self.outputClock}' -> "
+              f"'{self.outputClockChannel}' -> '{self.inputClockChannel}'")
 
-            # Route output sample clock to PFI terminal AFTER task is
-            # configured. Newer NI-DAQmx drivers can clear routes made
-            # before the task that owns the signal exists.
-            mx.DAQmxConnectTerms(self.outputClock,
-                    self.outputClockChannel,
-                    mx.DAQmx_Val_DoNotInvertPolarity)
+        # DAQmx Configure Code, Output
+        mx.DAQmxCreateTask("", byref(self.outputTaskHandle))
+        mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,
+                self.channelOut, "", -10.0, 10.0, mx.DAQmx_Val_Volts, None)
+        mx.DAQmxSetAODataXferReqCond(self.outputTaskHandle, "",
+                mx.DAQmx_Val_OnBrdMemEmpty)
+        mx.DAQmxCfgSampClkTiming(self.outputTaskHandle,
+                "OnboardClock", self.rate, mx.DAQmx_Val_Rising,
+                mx.DAQmx_Val_ContSamps, self._points * _BUF_PERIODS)
+        print("[DAQ init] output task configured OK")
 
-            # DAQmx Configure Code, Input
-            mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
-            mx.DAQmxAddGlobalChansToTask(self.inputTaskHandle, self.channelIn)
-            mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, self.inputClockChannel,
-                    self.rate, mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps,
-                    self._points * _BUF_PERIODS)
-        except mx.DAQError as err:
-            print("DAQmx Error: %s"%err)
+        # Route output sample clock to PFI terminal AFTER task is
+        # configured. Newer NI-DAQmx drivers can clear routes made
+        # before the task that owns the signal exists.
+        mx.DAQmxConnectTerms(self.outputClock,
+                self.outputClockChannel,
+                mx.DAQmx_Val_DoNotInvertPolarity)
+        print("[DAQ init] clock route connected OK")
+
+        # DAQmx Configure Code, Input
+        mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
+        mx.DAQmxAddGlobalChansToTask(self.inputTaskHandle, self.channelIn)
+        mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, self.inputClockChannel,
+                self.rate, mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps,
+                self._points * _BUF_PERIODS)
+        print("[DAQ init] input task configured OK")
 
     def stop(self):
         pass
