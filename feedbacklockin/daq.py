@@ -95,17 +95,14 @@ class Daq(QObject):
         pass
 
     def start(self):
-        # Pre-fill the output buffer BEFORE starting either task.
-        mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points, False, 10.0,
-                mx.DAQmx_Val_GroupByChannel, self.data, byref(self.written),
-                None)
-
         # Start input first — it's waiting on external clock edges from
         # the output, so it arms but doesn't acquire yet.
         mx.DAQmxStartTask(self.inputTaskHandle)
-        # Now start the output explicitly. This begins generating the
-        # sample clock that drives both cards.
-        mx.DAQmxStartTask(self.outputTaskHandle)
+        # Write initial data and start the output task. This begins
+        # generating the sample clock that drives both cards.
+        mx.DAQmxWriteAnalogF64(self.outputTaskHandle, self._points, True, 10.0,
+                mx.DAQmx_Val_GroupByChannel, self.data, byref(self.written),
+                None)
 
         WriteThread = threading.Thread(target=self.runWriteThread, args=())
         WriteThread.daemon = True
