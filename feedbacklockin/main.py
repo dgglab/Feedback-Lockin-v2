@@ -5,9 +5,9 @@ import sys
 import time
 
 import numpy as np
-import PySide2
-from PySide2.QtCore import *
-from PySide2.QtWidgets import *
+import PySide6
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
 import pyqtgraph as pg
 
 from feedbacklockin import fbl
@@ -334,9 +334,9 @@ def Main():
     args = options.parse_args()
 
     if args.version:
-        print('PySide2 version:', PySide2.__version__)
-        print('Qt version used to compile PySide2:', PySide2.QtCore.__version__)
-        print('Local Qt version:', PySide2.QtCore.qVersion())
+        print('PySide6 version:', PySide6.__version__)
+        print('Qt version used to compile PySide6:', PySide6.QtCore.__version__)
+        print('Local Qt version:', PySide6.QtCore.qVersion())
         sys.exit(0)
 
     pg.setConfigOption('background', 'w')

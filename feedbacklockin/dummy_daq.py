@@ -6,7 +6,7 @@ keep this interface in line with the real DAQ card interface.
 import time
 
 import numpy as np
-from PySide2.QtCore import *
+from PySide6.QtCore import *
 
 from feedbacklockin.tmm import TransferMatrixModel
 

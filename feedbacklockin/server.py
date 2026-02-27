@@ -7,8 +7,8 @@ from functools import partial
 import socket
 import time
 
-from PySide2.QtCore import QObject, Signal
-from PySide2.QtNetwork import QTcpServer, QHostAddress, QTcpSocket
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtNetwork import QTcpServer, QHostAddress, QTcpSocket
 
 
 class Server(QObject):
@@ -38,7 +38,7 @@ class Server(QObject):
         conn = self._server.nextPendingConnection()
         conn.disconnected.connect(conn.deleteLater)
         conn.readyRead.connect(partial(self._handle, conn))
-        conn.error.connect(self._conn_error)
+        conn.errorOccurred.connect(self._conn_error)
 
     def _accept_error(self, err):
         print(f'Error accepting connection: {err}')

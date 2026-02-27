@@ -16,7 +16,7 @@ import time
 
 import numpy as np
 import PyDAQmx as mx
-from PySide2.QtCore import *
+from PySide6.QtCore import *
 
 
 class Daq(QObject):

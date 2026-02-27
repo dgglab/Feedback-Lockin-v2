@@ -1,4 +1,4 @@
-from PySide2.QtCore import *
+from PySide6.QtCore import *
 import numpy as np
 
 from feedbacklockin.sin_outs import SinOutputs
