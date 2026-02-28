@@ -84,10 +84,16 @@ class Daq(QObject):
         mx.DAQmxCreateAIVoltageChan(self.inputTaskHandle,
                 self.channelIn, "", mx.DAQmx_Val_NRSE,
                 -10.0, 10.0, mx.DAQmx_Val_Volts, None)
-        mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, self.inputClockChannel,
+        # Use external clock from output card if configured, otherwise
+        # fall back to internal clock (no sync, but useful for testing).
+        if self.inputClockChannel:
+            input_clock = self.inputClockChannel
+        else:
+            input_clock = "OnboardClock"
+        mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, input_clock,
                 self.rate, mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps,
                 self._points * _BUF_PERIODS)
-        print("[DAQ init] input task configured OK")
+        print(f"[DAQ init] input task configured OK (clock: {input_clock})")
 
     def stop(self):
         pass
