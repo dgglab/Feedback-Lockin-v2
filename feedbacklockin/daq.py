@@ -52,7 +52,7 @@ class Daq(QObject):
         self.data = np.zeros((self._points, self._channels), dtype=np.float64)
 
         self.dataOut = np.zeros((self._points, self._channels), dtype=np.float64)
-        self.tempData = np.zeros(self._points * (self._channels + 1),
+        self.tempData = np.zeros(self._points * self._channels,
                 dtype=np.float64)
 
         _BUF_PERIODS = 4
@@ -127,9 +127,9 @@ class Daq(QObject):
             try:
                 mx.DAQmxReadAnalogF64(self.inputTaskHandle, self._points, 10.0,
                         mx.DAQmx_Val_GroupByChannel, self.tempData,
-                        self._points * (self._channels + 1), byref(self.read),
+                        self._points * self._channels, byref(self.read),
                         None)
-                self.dataOut = np.reshape(self.tempData[self._points:],
+                self.dataOut = np.reshape(self.tempData,
                         (self._points, self._channels), order='F')
             except Exception as e:
                 print(f"failed to read from DAQ: {e}")
