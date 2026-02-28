@@ -73,7 +73,7 @@ class Daq(QObject):
         # DAQmx Configure Code, Input
         mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
         mx.DAQmxCreateAIVoltageChan(self.inputTaskHandle,
-                self.channelIn, "", mx.DAQmx_Val_NRSE,
+                self.channelIn, "", mx.DAQmx_Val_RSE,
                 -10.0, 10.0, mx.DAQmx_Val_Volts, None)
         input_clock = self.inputClockChannel if self.inputClockChannel \
                 else "OnboardClock"
