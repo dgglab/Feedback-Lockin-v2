@@ -68,20 +68,16 @@ class Daq(QObject):
         mx.DAQmxCreateTask("", byref(self.outputTaskHandle))
         mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,
                 self.channelOut, "", -10.0, 10.0, mx.DAQmx_Val_Volts, None)
-        mx.DAQmxSetAODataXferReqCond(self.outputTaskHandle, "",
-                mx.DAQmx_Val_OnBrdMemEmpty)
         mx.DAQmxCfgSampClkTiming(self.outputTaskHandle,
                 "OnboardClock", self.rate, mx.DAQmx_Val_Rising,
                 mx.DAQmx_Val_ContSamps, self._points * _BUF_PERIODS)
-        print("[DAQ init] output task configured OK")
-
-        # Route output sample clock to PFI terminal AFTER task is
-        # configured. Newer NI-DAQmx drivers can clear routes made
-        # before the task that owns the signal exists.
-        mx.DAQmxConnectTerms(self.outputClock,
-                self.outputClockChannel,
-                mx.DAQmx_Val_DoNotInvertPolarity)
-        print("[DAQ init] clock route connected OK")
+        # Export the output task's sample clock to a PFI terminal so
+        # it can be wired to the input card. More robust than
+        # ConnectTerms which creates an abstract route.
+        mx.DAQmxExportSignal(self.outputTaskHandle,
+                mx.DAQmx_Val_SampleClock, self.outputClockChannel)
+        print("[DAQ init] output task configured OK, sample clock exported to "
+              f"'{self.outputClockChannel}'")
 
         # DAQmx Configure Code, Input
         mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
