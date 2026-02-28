@@ -57,13 +57,6 @@ class Daq(QObject):
 
         _BUF_PERIODS = 4
 
-        print(f"[DAQ init] channels={self._channels} points={self._points} "
-              f"rate={self.rate}")
-        print(f"[DAQ init] output_channels='{self.channelOut}'")
-        print(f"[DAQ init] input_channels='{self.channelIn}'")
-        print(f"[DAQ init] clock route: '{self.outputClock}' -> "
-              f"'{self.outputClockChannel}' -> '{self.inputClockChannel}'")
-
         # DAQmx Configure Code, Output
         mx.DAQmxCreateTask("", byref(self.outputTaskHandle))
         mx.DAQmxCreateAOVoltageChan(self.outputTaskHandle,
@@ -71,29 +64,22 @@ class Daq(QObject):
         mx.DAQmxCfgSampClkTiming(self.outputTaskHandle,
                 "OnboardClock", self.rate, mx.DAQmx_Val_Rising,
                 mx.DAQmx_Val_ContSamps, self._points * _BUF_PERIODS)
-        # Export the output task's sample clock to a PFI terminal so
-        # it can be wired to the input card. More robust than
-        # ConnectTerms which creates an abstract route.
-        mx.DAQmxExportSignal(self.outputTaskHandle,
-                mx.DAQmx_Val_SampleClock, self.outputClockChannel)
-        print("[DAQ init] output task configured OK, sample clock exported to "
-              f"'{self.outputClockChannel}'")
+        # Export the output task's sample clock to a terminal so it can
+        # be wired to the input card.
+        if self.outputClockChannel:
+            mx.DAQmxExportSignal(self.outputTaskHandle,
+                    mx.DAQmx_Val_SampleClock, self.outputClockChannel)
 
         # DAQmx Configure Code, Input
         mx.DAQmxCreateTask("", byref(self.inputTaskHandle))
         mx.DAQmxCreateAIVoltageChan(self.inputTaskHandle,
                 self.channelIn, "", mx.DAQmx_Val_NRSE,
                 -10.0, 10.0, mx.DAQmx_Val_Volts, None)
-        # Use external clock from output card if configured, otherwise
-        # fall back to internal clock (no sync, but useful for testing).
-        if self.inputClockChannel:
-            input_clock = self.inputClockChannel
-        else:
-            input_clock = "OnboardClock"
+        input_clock = self.inputClockChannel if self.inputClockChannel \
+                else "OnboardClock"
         mx.DAQmxCfgSampClkTiming(self.inputTaskHandle, input_clock,
                 self.rate, mx.DAQmx_Val_Rising, mx.DAQmx_Val_ContSamps,
                 self._points * _BUF_PERIODS)
-        print(f"[DAQ init] input task configured OK (clock: {input_clock})")
 
     def stop(self):
         pass
